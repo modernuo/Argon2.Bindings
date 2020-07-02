@@ -2,14 +2,14 @@
 <package>
   <metadata>
     <id>Argon2.Bindings</id>
-    <version>1.3.0</version>
+    <version>1.5.0</version>
     <authors>Kamron Batman</authors>
     <owners>Kamron Batman</owners>
     <license type="expression">MIT</license>
     <projectUrl>https://github.com/modernuo/Argon2</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Argon2 Bindings for .NET Core</description>
-    <releaseNotes>Updated to use Span</releaseNotes>
+    <releaseNotes>Updated to include native binaries for more linux flavors</releaseNotes>
     <copyright>Copyright 2019-2020</copyright>
   </metadata>
 </package>
