@@ -2,7 +2,7 @@
 <package>
   <metadata>
     <id>Argon2.Bindings</id>
-    <version>1.5.0</version>
+    <version>1.5.1</version>
     <authors>Kamron Batman</authors>
     <owners>Kamron Batman</owners>
     <license type="expression">MIT</license>
