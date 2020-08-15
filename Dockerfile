@@ -2,42 +2,49 @@ FROM ubuntu:16.04 as ubuntu-16
 RUN apt-get update && apt-get install -y gcc make
 COPY ./argon2-src ./argon2
 WORKDIR /argon2
+ENV OPTTARGET portable
 RUN make
 
 FROM ubuntu:18.04 as ubuntu-18
 RUN apt-get update && apt-get install -y gcc make
 COPY ./argon2-src ./argon2
 WORKDIR /argon2
+ENV OPTTARGET portable
 RUN make
 
 FROM ubuntu:20.04 as ubuntu-20
 RUN apt-get update && apt-get install -y gcc make
 COPY ./argon2-src ./argon2
 WORKDIR /argon2
+ENV OPTTARGET portable
 RUN make
 
 FROM debian:9 as debian-9
 RUN apt-get update && apt-get install -y gcc make
 COPY ./argon2-src ./argon2
 WORKDIR /argon2
+ENV OPTTARGET portable
 RUN make
 
 FROM debian:10 as debian-10
 RUN apt-get update && apt-get install -y gcc make
 COPY ./argon2-src ./argon2
 WORKDIR /argon2
+ENV OPTTARGET portable
 RUN make
 
 FROM centos:7 as centos-7
 RUN yum update -y && yum install -y gcc make
 COPY ./argon2-src ./argon2
 WORKDIR /argon2
+ENV OPTTARGET portable
 RUN make
 
 FROM centos:8 as centos-8
 RUN yum update -y && yum install -y gcc make
 COPY ./argon2-src ./argon2
 WORKDIR /argon2
+ENV OPTTARGET portable
 RUN make
 
 FROM alpine:latest
