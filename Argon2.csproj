@@ -5,15 +5,9 @@
     <TargetFramework>net5.0</TargetFramework>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
-<<<<<<< Updated upstream
-    <LangVersion>8</LangVersion>
-    <AssemblyVersion>1.6.0</AssemblyVersion>
-    <PackageVersion>1.6.0</PackageVersion>
-=======
     <LangVersion>9</LangVersion>
     <AssemblyVersion>1.8.0</AssemblyVersion>
     <PackageVersion>1.8.0</PackageVersion>
->>>>>>> Stashed changes
     <RootNamespace>System.Security.Cryptography</RootNamespace>
     <AssemblyName>Argon2.Bindings</AssemblyName>
     <IsPackable>true</IsPackable>
