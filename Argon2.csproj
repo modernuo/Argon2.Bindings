@@ -2,12 +2,12 @@
   <PropertyGroup>
     <Authors>Kamron Batman</Authors>
     <Copyright>2019-2020</Copyright>
-    <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
+    <TargetFramework>net5.0</TargetFramework>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
-    <LangVersion>8</LangVersion>
-    <AssemblyVersion>1.6.0</AssemblyVersion>
-    <PackageVersion>1.6.0</PackageVersion>
+    <LangVersion>9</LangVersion>
+    <AssemblyVersion>1.8.0</AssemblyVersion>
+    <PackageVersion>1.8.0</PackageVersion>
     <RootNamespace>System.Security.Cryptography</RootNamespace>
     <AssemblyName>Argon2.Bindings</AssemblyName>
     <IsPackable>true</IsPackable>
