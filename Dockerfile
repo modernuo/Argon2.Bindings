@@ -48,14 +48,14 @@ ENV OPTTARGET x86-64
 RUN make
 
 FROM fedora:32 as fedora-32
-RUN dnf update && dnf install -y gcc make
+RUN dnf upgrade -y && dnf install -y gcc make
 COPY ./argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM fedora:33 as fedora-33
-RUN dnf update && dnf install -y gcc make
+RUN dnf upgrade -y && dnf install -y gcc make
 COPY ./argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
