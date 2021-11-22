@@ -16,7 +16,7 @@ namespace System.Security.Cryptography
     public uint HashLength { get; }
 
     public uint SaltLength { get; }
-    
+
     public Encoding StringEncoding { get; }
 
     public RandomNumberGenerator Rng { get; }
@@ -41,7 +41,7 @@ namespace System.Security.Cryptography
       HashLength = hashLength;
       SaltLength = saltLength;
       StringEncoding = encoding ?? Encoding.UTF8;
-      Rng = rng ?? new RNGCryptoServiceProvider();
+      Rng = rng ?? RandomNumberGenerator.Create();
     }
 
     public string Hash(ReadOnlySpan<char> password)
@@ -50,21 +50,21 @@ namespace System.Security.Cryptography
       Rng.GetBytes(salt);
       return Hash(password, salt);
     }
-    
+
     public string Hash(ReadOnlySpan<char> password, ReadOnlySpan<byte> salt)
     {
       Span<byte> passwordBytes = stackalloc byte[StringEncoding.GetByteCount(password)];
       StringEncoding.GetBytes(password, passwordBytes);
 
       Span<byte> hash = stackalloc byte[(int)HashLength];
-      
+
       return Hash(passwordBytes, salt, hash);
     }
 
     public string Hash(ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, Span<byte> hash)
     {
       Span<byte> encoded = stackalloc byte[EncodedHashStringSize];
-      
+
       var result = Argon2.Library.Hash(
         TimeCost,
         MemoryCost,
@@ -76,7 +76,7 @@ namespace System.Security.Cryptography
         (int)ArgonType,
         0x13
       );
-      
+
       if (result != Argon2Error.OK)
         throw new Argon2Exception("hashing", result);
 
@@ -127,7 +127,7 @@ namespace System.Security.Cryptography
       newFormattedHash = expectedHash.ToString();
       return verified;
     }
-    
+
     public static HashMetadata ExtractMetadata(ReadOnlySpan<char> formattedHash)
     {
       var context = new Argon2Context
