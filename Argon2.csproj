@@ -5,9 +5,9 @@
     <TargetFramework>net6.0</TargetFramework>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
-    <LangVersion>9</LangVersion>
-    <AssemblyVersion>1.10.0</AssemblyVersion>
-    <PackageVersion>1.10.0</PackageVersion>
+    <LangVersion>preview</LangVersion>
+    <AssemblyVersion>1.11.0</AssemblyVersion>
+    <PackageVersion>1.11.0</PackageVersion>
     <RootNamespace>System.Security.Cryptography</RootNamespace>
     <AssemblyName>Argon2.Bindings</AssemblyName>
     <IsPackable>true</IsPackable>
@@ -55,6 +55,11 @@
       <PackagePath>runtimes/debian.10-x64/native</PackagePath>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="runtimes\debian.11-x64\native\libargon2.so">
+      <Pack>true</Pack>
+      <PackagePath>runtimes/debian.11-x64/native</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="runtimes\centos.7-x64\native\libargon2.so">
       <Pack>true</Pack>
       <PackagePath>runtimes/centos.7-x64/native</PackagePath>
@@ -73,6 +78,11 @@
     <Content Include="runtimes\fedora.33-x64\native\libargon2.so">
       <Pack>true</Pack>
       <PackagePath>runtimes/fedora.33-x64/native</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="runtimes\fedora.34-x64\native\libargon2.so">
+      <Pack>true</Pack>
+      <PackagePath>runtimes/fedora.34-x64/native</PackagePath>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
