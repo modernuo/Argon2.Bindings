@@ -1,3 +1,10 @@
+FROM ubuntu:14.04 as ubuntu-14
+RUN apt-get update && apt-get install -y gcc make
+COPY ./argon2-src ./argon2
+WORKDIR /argon2
+ENV OPTTARGET x86-64
+RUN make
+
 FROM ubuntu:16.04 as ubuntu-16
 RUN apt-get update && apt-get install -y gcc make
 COPY ./argon2-src ./argon2
@@ -76,6 +83,7 @@ ENV OPTTARGET x86-64
 RUN make
 
 FROM alpine:latest
+RUN mkdir -p ./runtimes/ubuntu.14.04-x64/native
 RUN mkdir -p ./runtimes/ubuntu.16.04-x64/native
 RUN mkdir -p ./runtimes/ubuntu.18.04-x64/native
 RUN mkdir -p ./runtimes/ubuntu.20.04-x64/native
@@ -91,6 +99,11 @@ RUN mkdir -p ./runtimes/fedora.32-x64/native
 RUN mkdir -p ./runtimes/fedora.33-x64/native
 RUN mkdir -p ./runtimes/fedora.34-x64/native
 
+RUN mkdir -p ./runtimes/linuxmint.17-x64/native
+RUN mkdir -p ./runtimes/linuxmint.18-x64/native
+RUN mkdir -p ./runtimes/linuxmint.19-x64/native
+
+COPY --from=ubuntu-14 /argon2/libargon2.so.1 ./runtimes/ubuntu.14.04-x64/native/libargon2.so
 COPY --from=ubuntu-16 /argon2/libargon2.so.1 ./runtimes/ubuntu.16.04-x64/native/libargon2.so
 COPY --from=ubuntu-18 /argon2/libargon2.so.1 ./runtimes/ubuntu.18.04-x64/native/libargon2.so
 COPY --from=ubuntu-20 /argon2/libargon2.so.1 ./runtimes/ubuntu.20.04-x64/native/libargon2.so
@@ -105,3 +118,7 @@ COPY --from=centos-8 /argon2/libargon2.so.1 ./runtimes/centos.8-x64/native/libar
 COPY --from=fedora-32 /argon2/libargon2.so.1 ./runtimes/fedora.32-x64/native/libargon2.so
 COPY --from=fedora-33 /argon2/libargon2.so.1 ./runtimes/fedora.33-x64/native/libargon2.so
 COPY --from=fedora-34 /argon2/libargon2.so.1 ./runtimes/fedora.34-x64/native/libargon2.so
+
+COPY --from=ubuntu-14 /argon2/libargon2.so.1 ./runtimes/linuxmint.17-x64/native/libargon2.so
+COPY --from=ubuntu-16 /argon2/libargon2.so.1 ./runtimes/linuxmint.18-x64/native/libargon2.so
+COPY --from=ubuntu-18 /argon2/libargon2.so.1 ./runtimes/linuxmint.19-x64/native/libargon2.so
