@@ -2,13 +2,13 @@
 <package>
   <metadata>
     <id>Argon2.Bindings</id>
-    <version>1.12.0</version>
+    <version>1.13.0</version>
     <authors>Kamron Batman</authors>
     <owners>Kamron Batman</owners>
     <license type="expression">MIT</license>
     <projectUrl>https://github.com/modernuo/Argon2</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Argon2 Bindings for .NET 6</description>
-    <copyright>Copyright 2021</copyright>
+    <copyright>Copyright 2022</copyright>
   </metadata>
 </package>
