@@ -82,6 +82,20 @@ WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
+FROM fedora:35 as fedora-35
+RUN dnf upgrade -y && dnf install -y gcc make
+COPY ./argon2-src ./argon2
+WORKDIR /argon2
+ENV OPTTARGET x86-64
+RUN make
+
+FROM fedora:36 as fedora-36
+RUN dnf upgrade -y && dnf install -y gcc make
+COPY ./argon2-src ./argon2
+WORKDIR /argon2
+ENV OPTTARGET x86-64
+RUN make
+
 FROM alpine:latest
 RUN mkdir -p ./runtimes/ubuntu.14.04-x64/native
 RUN mkdir -p ./runtimes/ubuntu.16.04-x64/native
@@ -98,6 +112,8 @@ RUN mkdir -p ./runtimes/centos.8-x64/native
 RUN mkdir -p ./runtimes/fedora.32-x64/native
 RUN mkdir -p ./runtimes/fedora.33-x64/native
 RUN mkdir -p ./runtimes/fedora.34-x64/native
+RUN mkdir -p ./runtimes/fedora.35-x64/native
+RUN mkdir -p ./runtimes/fedora.36-x64/native
 
 RUN mkdir -p ./runtimes/linuxmint.17-x64/native
 RUN mkdir -p ./runtimes/linuxmint.18-x64/native
@@ -118,6 +134,8 @@ COPY --from=centos-8 /argon2/libargon2.so.1 ./runtimes/centos.8-x64/native/libar
 COPY --from=fedora-32 /argon2/libargon2.so.1 ./runtimes/fedora.32-x64/native/libargon2.so
 COPY --from=fedora-33 /argon2/libargon2.so.1 ./runtimes/fedora.33-x64/native/libargon2.so
 COPY --from=fedora-34 /argon2/libargon2.so.1 ./runtimes/fedora.34-x64/native/libargon2.so
+COPY --from=fedora-35 /argon2/libargon2.so.1 ./runtimes/fedora.35-x64/native/libargon2.so
+COPY --from=fedora-36 /argon2/libargon2.so.1 ./runtimes/fedora.36-x64/native/libargon2.so
 
 COPY --from=ubuntu-14 /argon2/libargon2.so.1 ./runtimes/linuxmint.17-x64/native/libargon2.so
 COPY --from=ubuntu-16 /argon2/libargon2.so.1 ./runtimes/linuxmint.18-x64/native/libargon2.so
