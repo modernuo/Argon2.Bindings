@@ -1,10 +1,10 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace System.Security.Cryptography
+namespace System.Security.Cryptography;
+
+[StructLayout(LayoutKind.Sequential)]
+internal class Argon2Context
 {
-  [StructLayout(LayoutKind.Sequential)]
-  internal class Argon2Context
-  {
     public IntPtr Out;
     public uint OutLen;
 
@@ -29,5 +29,4 @@ namespace System.Security.Cryptography
     public IntPtr FreeCallback;
 
     public uint Flags;
-  }
 }
