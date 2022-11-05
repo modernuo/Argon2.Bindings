@@ -5,18 +5,21 @@
         <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
         <Platforms>x64;arm64</Platforms>
         <LangVersion>preview</LangVersion>
-        <AssemblyVersion>1.14.0</AssemblyVersion>
-        <PackageVersion>1.14.0</PackageVersion>
+        <AssemblyVersion>1.14.2</AssemblyVersion>
+        <PackageVersion>1.14.2</PackageVersion>
         <RootNamespace>System.Security.Cryptography</RootNamespace>
         <AssemblyName>Argon2.Bindings</AssemblyName>
         <IsPackable>true</IsPackable>
-        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
         <Configurations>Debug;Release;Analyze</Configurations>
-        <DefineConstants Condition="$(RuntimeIdentifier.StartsWith('win'))">WINDOWS</DefineConstants>
-        <DefineConstants Condition="$(RuntimeIdentifier.StartsWith(`win`)) != true">UNIX</DefineConstants>
         <NoWarn>NU1603</NoWarn>
         <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
+        <Copyright>Copyright 2022</Copyright>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+        <PackageProjectUrl>https://github.com/modernuo/Argon2.Bindings</PackageProjectUrl>
+        <Description>Argon2 bindings for .NET 7</Description>
     </PropertyGroup>
     <ItemGroup>
         <Content Include="runtimes\win-x64\native\libargon2.dll">

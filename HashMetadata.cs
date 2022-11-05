@@ -1,19 +1,15 @@
 ﻿namespace System.Security.Cryptography;
 
-public class HashMetadata
+public record HashMetadata(
+    Argon2Type ArgonType,
+    uint MemoryCost,
+    uint TimeCost,
+    uint Lanes,
+    uint Parallelism,
+    byte[] Salt,
+    byte[] Hash
+)
 {
-    public Argon2Type ArgonType { get; set; }
-
-    public uint MemoryCost { get; set; }
-
-    public uint TimeCost { get; set; }
-
-    public uint Parallelism { get; set; }
-
-    public byte[] Salt { get; set; }
-
-    public byte[] Hash { get; set; }
-
     public string GetBase64Salt() => Convert.ToBase64String(Salt).Replace("=", "");
 
     public string GetBase64Hash() => Convert.ToBase64String(Hash).Replace("=", "");

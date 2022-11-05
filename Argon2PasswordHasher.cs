@@ -111,7 +111,7 @@ public class Argon2PasswordHasher
     {
         var result = Argon2.Verify(expectedHash, password, password.Length, (int)ArgonType);
 
-        if (result == Argon2Error.OK || result == Argon2Error.VERIFY_MISMATCH || result == Argon2Error.DECODING_FAIL)
+        if (result is Argon2Error.OK or Argon2Error.VERIFY_MISMATCH or Argon2Error.DECODING_FAIL)
         {
             return result == Argon2Error.OK;
         }
@@ -203,14 +203,15 @@ public class Argon2PasswordHasher
             Marshal.Copy(context.Out, hash, 0, hash.Length);
 
             return new HashMetadata
-            {
-                ArgonType = type,
-                MemoryCost = context.MemoryCost,
-                TimeCost = context.TimeCost,
-                Parallelism = context.Threads,
-                Salt = salt,
-                Hash = hash
-            };
+            (
+                ArgonType: type,
+                MemoryCost: context.MemoryCost,
+                TimeCost: context.TimeCost,
+                Lanes: context.Lanes,
+                Parallelism: context.Threads,
+                Salt: salt,
+                Hash: hash
+            );
         }
         finally
         {

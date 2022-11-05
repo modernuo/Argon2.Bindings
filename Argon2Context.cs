@@ -3,7 +3,7 @@
 namespace System.Security.Cryptography;
 
 [StructLayout(LayoutKind.Sequential)]
-internal class Argon2Context
+public class Argon2Context
 {
     public IntPtr Out;
     public uint OutLen;
