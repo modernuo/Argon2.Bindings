@@ -54,7 +54,14 @@ WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
-FROM centos:8 as centos-8
+FROM quay.io/centos/centos:stream8 as centos-8
+RUN yum update -y && yum install -y gcc make
+COPY ./argon2-src ./argon2
+WORKDIR /argon2
+ENV OPTTARGET x86-64
+RUN make
+
+FROM quay.io/centos/centos:stream9 as centos-9
 RUN yum update -y && yum install -y gcc make
 COPY ./argon2-src ./argon2
 WORKDIR /argon2
@@ -108,6 +115,7 @@ RUN mkdir -p ./runtimes/debian.11-x64/native
 
 RUN mkdir -p ./runtimes/centos.7-x64/native
 RUN mkdir -p ./runtimes/centos.8-x64/native
+RUN mkdir -p ./runtimes/centos.9-x64/native
 
 RUN mkdir -p ./runtimes/fedora.32-x64/native
 RUN mkdir -p ./runtimes/fedora.33-x64/native
@@ -130,6 +138,7 @@ COPY --from=debian-11 /argon2/libargon2.so.1 ./runtimes/debian.11-x64/native/lib
 
 COPY --from=centos-7 /argon2/libargon2.so.1 ./runtimes/centos.7-x64/native/libargon2.so
 COPY --from=centos-8 /argon2/libargon2.so.1 ./runtimes/centos.8-x64/native/libargon2.so
+COPY --from=centos-9 /argon2/libargon2.so.1 ./runtimes/centos.9-x64/native/libargon2.so
 
 COPY --from=fedora-32 /argon2/libargon2.so.1 ./runtimes/fedora.32-x64/native/libargon2.so
 COPY --from=fedora-33 /argon2/libargon2.so.1 ./runtimes/fedora.33-x64/native/libargon2.so

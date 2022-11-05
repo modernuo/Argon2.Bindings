@@ -1,5 +1,5 @@
 # .NET Bindings for Argon 2
-.NET 5 bindings for [Argon 2](https://github.com/P-H-C/phc-winner-argon2)
+.NET 7 bindings for [Argon 2](https://github.com/P-H-C/phc-winner-argon2)
 
 ### Installation
 Install through NuGet. The package can be found by searching for [Argon2.Bindings](https://www.nuget.org/packages/Argon2.Bindings).

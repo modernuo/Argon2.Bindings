@@ -7,5 +7,6 @@
 /.vs
 /.vscode
 /argon2-src
+/tmp
 
 .DS_Store
