@@ -1,8 +1,8 @@
-﻿namespace System.Security.Cryptography
+﻿namespace System.Security.Cryptography;
+
+public enum Argon2Type
 {
-  public enum Argon2Type
-  {
     Argon2d,
-    Argon2i
-  }
+    Argon2i,
+    Argon2id
 }

@@ -1,7 +1,7 @@
-﻿namespace System.Security.Cryptography
+﻿namespace System.Security.Cryptography;
+
+public enum Argon2Error
 {
-  public enum Argon2Error
-  {
     OK = 0,
     OUTPUT_TOO_SHORT = -2,
     SALT_TOO_SHORT = -6,
@@ -17,5 +17,4 @@
     DECODING_FAIL = -32,
     THREAD_FAIL = -33,
     VERIFY_MISMATCH = -35
-  }
 }
