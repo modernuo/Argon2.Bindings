@@ -8,7 +8,7 @@ public static class Argon2
 {
     public const string WindowsAssemblyName = "libargon2.dll";
     // Unix adds the word lib in front as one of the resolutions
-    public const string UnixAssemblyName = "argon2";
+    public const string UnixAssemblyName = "libargon2";
 
     static Argon2() => NativeLibrary.SetDllImportResolver(Assembly.GetExecutingAssembly(), DllImportResolver);
 
@@ -26,7 +26,7 @@ public static class Argon2
             return handle;
         }
 
-        throw new BadImageFormatException("Could not load the libarong2 native library.");
+        throw new BadImageFormatException("Could not load the libargon2 native library.");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -52,7 +52,7 @@ public static class Argon2
     public static Argon2Error Decode(Argon2Context ctx, ReadOnlySpan<byte> str, int type) =>
         decode_string(ctx, in str.GetPinnableReference(), type);
 
-    [DllImport("argon2", EntryPoint = "argon2_hash")]
+    [DllImport("libargon2", EntryPoint = "argon2_hash")]
     internal static extern Argon2Error argon2_hash(uint t_cost, uint m_cost, uint parallelism,
         in byte pwd, int pwdlen,
         in byte salt, int saltlen,
@@ -61,9 +61,9 @@ public static class Argon2
         int type, int version
     );
 
-    [DllImport("argon2", EntryPoint = "argon2_verify")]
+    [DllImport("libargon2", EntryPoint = "argon2_verify")]
     internal static extern Argon2Error argon2_verify(in byte encoded, in byte pwd, int pwdlen, int type);
 
-    [DllImport("argon2", EntryPoint = "decode_string")]
+    [DllImport("libargon2", EntryPoint = "decode_string")]
     internal static extern Argon2Error decode_string(Argon2Context ctx, in byte str, int type);
 }
