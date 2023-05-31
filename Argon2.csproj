@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <Authors>Kamron Batman</Authors>
-        <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+        <TargetFramework>net7.0</TargetFramework>
         <Platforms>x64;arm64</Platforms>
         <LangVersion>preview</LangVersion>
-        <AssemblyVersion>1.14.3</AssemblyVersion>
-        <PackageVersion>1.14.3</PackageVersion>
+        <AssemblyVersion>1.15.0</AssemblyVersion>
+        <PackageVersion>1.15.0</PackageVersion>
         <RootNamespace>System.Security.Cryptography</RootNamespace>
         <AssemblyName>Argon2.Bindings</AssemblyName>
         <IsPackable>true</IsPackable>
@@ -13,7 +13,7 @@
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
         <Configurations>Debug;Release;Analyze</Configurations>
         <NoWarn>NU1603</NoWarn>
-        <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
+        <RuntimeIdentifiers>win-x64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
         <Copyright>Copyright 2022</Copyright>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
@@ -29,6 +29,11 @@
         <Content Include="runtimes\osx-x64\native\libargon2.dylib">
             <Pack>true</Pack>
             <PackagePath>runtimes/osx-x64/native</PackagePath>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Include="runtimes\osx-arm64\native\libargon2.dylib">
+            <Pack>true</Pack>
+            <PackagePath>runtimes/osx-arm64/native</PackagePath>
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
     </ItemGroup>
