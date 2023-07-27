@@ -1,104 +1,104 @@
 FROM ubuntu:14.04 as ubuntu-14
 RUN apt-get update && apt-get install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM ubuntu:16.04 as ubuntu-16
 RUN apt-get update && apt-get install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM ubuntu:18.04 as ubuntu-18
 RUN apt-get update && apt-get install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM ubuntu:20.04 as ubuntu-20
 RUN apt-get update && apt-get install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM debian:9 as debian-9
 RUN apt-get update && apt-get install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM debian:10 as debian-10
 RUN apt-get update && apt-get install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM debian:11 as debian-11
 RUN apt-get update && apt-get install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM centos:7 as centos-7
 RUN yum update -y && yum install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM quay.io/centos/centos:stream8 as centos-8
 RUN yum update -y && yum install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM quay.io/centos/centos:stream9 as centos-9
 RUN yum update -y && yum install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM fedora:32 as fedora-32
 RUN dnf upgrade -y && dnf install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM fedora:33 as fedora-33
 RUN dnf upgrade -y && dnf install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM fedora:34 as fedora-34
 RUN dnf upgrade -y && dnf install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM fedora:35 as fedora-35
 RUN dnf upgrade -y && dnf install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
 
 FROM fedora:36 as fedora-36
 RUN dnf upgrade -y && dnf install -y gcc make
-COPY ./argon2-src ./argon2
+COPY ../argon2-src ./argon2
 WORKDIR /argon2
 ENV OPTTARGET x86-64
 RUN make
