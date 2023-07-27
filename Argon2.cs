@@ -30,40 +30,63 @@ public static class Argon2
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Argon2Error Hash(uint t_cost, uint m_cost, uint parallelism,
+    public static unsafe Argon2Error Hash(uint t_cost, uint m_cost, uint parallelism,
         ReadOnlySpan<byte> pwd,
         ReadOnlySpan<byte> salt,
         Span<byte> hash,
         Span<byte> encoded,
-        int type, int version) =>
-        argon2_hash(t_cost, m_cost, parallelism,
-            in pwd.GetPinnableReference(), pwd.Length,
-            in salt.GetPinnableReference(), salt.Length,
-            ref hash.GetPinnableReference(), hash.Length,
-            ref encoded.GetPinnableReference(), encoded.Length,
-            type, version
-        );
+        int type, int version)
+    {
+        fixed (byte* p_pwd = pwd, p_salt = salt, p_hash = hash, p_encoded = encoded)
+        {
+            return argon2_hash(
+                t_cost,
+                m_cost,
+                parallelism,
+                p_pwd,
+                pwd.Length,
+                p_salt,
+                salt.Length,
+                p_hash,
+                hash.Length,
+                p_encoded,
+                encoded.Length,
+                type,
+                version
+            );
+        }
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Argon2Error Verify(ReadOnlySpan<byte> encoded, ReadOnlySpan<byte> pwd, int pwdlen, int type) =>
-        argon2_verify(in encoded.GetPinnableReference(), in pwd.GetPinnableReference(), pwdlen, type);
+    public static unsafe Argon2Error Verify(ReadOnlySpan<byte> encoded, ReadOnlySpan<byte> pwd, long pwdlen, int type)
+    {
+        fixed (byte* p_pwd = pwd, p_encoded = encoded)
+        {
+            return argon2_verify(p_pwd, p_encoded, pwdlen, type);
+        }
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Argon2Error Decode(Argon2Context ctx, ReadOnlySpan<byte> str, int type) =>
-        decode_string(ctx, in str.GetPinnableReference(), type);
+    public static unsafe Argon2Error Decode(Argon2Context ctx, ReadOnlySpan<byte> str, int type)
+    {
+        fixed (byte* p_str = str)
+        {
+            return decode_string(ctx, p_str, type);
+        }
+    }
 
     [DllImport("libargon2", EntryPoint = "argon2_hash")]
-    internal static extern Argon2Error argon2_hash(uint t_cost, uint m_cost, uint parallelism,
-        in byte pwd, int pwdlen,
-        in byte salt, int saltlen,
-        ref byte hash, int hashlen,
-        ref byte encoded, int encodedlen,
+    internal static extern unsafe Argon2Error argon2_hash(uint t_cost, uint m_cost, uint parallelism,
+        byte* pwd, long pwdlen,
+        byte* salt, long saltlen,
+        byte* hash, long hashlen,
+        byte* encoded, long encodedlen,
         int type, int version
     );
 
     [DllImport("libargon2", EntryPoint = "argon2_verify")]
-    internal static extern Argon2Error argon2_verify(in byte encoded, in byte pwd, int pwdlen, int type);
+    internal static extern unsafe Argon2Error argon2_verify(byte* encoded, byte* pwd, long pwdlen, int type);
 
     [DllImport("libargon2", EntryPoint = "decode_string")]
-    internal static extern Argon2Error decode_string(Argon2Context ctx, in byte str, int type);
+    internal static extern unsafe Argon2Error decode_string(Argon2Context ctx, byte* str, int type);
 }

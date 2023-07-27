@@ -3,8 +3,8 @@
         <Authors>Kamron Batman</Authors>
         <TargetFramework>net7.0</TargetFramework>
         <LangVersion>preview</LangVersion>
-        <AssemblyVersion>1.15.1</AssemblyVersion>
-        <PackageVersion>1.15.1</PackageVersion>
+        <AssemblyVersion>1.16.0</AssemblyVersion>
+        <PackageVersion>1.16.0</PackageVersion>
         <RootNamespace>System.Security.Cryptography</RootNamespace>
         <AssemblyName>Argon2.Bindings</AssemblyName>
         <IsPackable>true</IsPackable>
@@ -13,11 +13,12 @@
         <Configurations>Debug;Release;Analyze</Configurations>
         <NoWarn>NU1603</NoWarn>
         <RuntimeIdentifiers>win-x64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
-        <Copyright>Copyright 2022</Copyright>
+        <Copyright>Copyright 2023</Copyright>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
         <PackageProjectUrl>https://github.com/modernuo/Argon2.Bindings</PackageProjectUrl>
         <Description>Argon2 bindings for .NET 7</Description>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
     <ItemGroup>
         <Content Include="runtimes\win-x64\native\libargon2.dll">

@@ -89,13 +89,13 @@ public class Argon2PasswordHasher
             throw new Argon2Exception("hashing", result);
         }
 
-        var firstNonNull = encoded.Length - 2;
-        while (encoded[firstNonNull] == 0)
+        var firstNonNull = encoded.LastIndexOfAnyExcept((byte)0);
+        if (firstNonNull > -1)
         {
-            firstNonNull--;
+            encoded = encoded[..firstNonNull];
         }
 
-        return Encoding.ASCII.GetString(encoded.Slice(0, firstNonNull + 1));
+        return Encoding.ASCII.GetString(encoded);
     }
 
     public bool Verify(ReadOnlySpan<char> expectedHash, ReadOnlySpan<char> password)
