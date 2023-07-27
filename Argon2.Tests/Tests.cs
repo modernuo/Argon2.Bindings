@@ -6,7 +6,7 @@ namespace Argon2Tests;
 public class UnitTest1
 {
     [Fact]
-    public void TestVerify()
+    public void TestHashAndVerify()
     {
         var hasher = new Argon2PasswordHasher();
         const string password = "123456789";
