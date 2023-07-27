@@ -3,7 +3,7 @@
 
 ### Installation
 Install through NuGet. The package can be found by searching for [Argon2.Bindings](https://www.nuget.org/packages/Argon2.Bindings).
-This package only supports x64 architecture. Pull requests are welcome to add support for other architectures/operating systems.
+This package only supports x64 and arm64 architectures. Pull requests are welcome to add support for other architectures/operating systems.
 
 ### Usage
 ```csharp
