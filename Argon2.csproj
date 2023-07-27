@@ -13,7 +13,7 @@
         <Configurations>Debug;Release;Analyze</Configurations>
         <NoWarn>NU1603</NoWarn>
         <RuntimeIdentifiers>win-x64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
-        <Copyright>Copyright 2022</Copyright>
+        <Copyright>Copyright 2023</Copyright>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
         <PackageProjectUrl>https://github.com/modernuo/Argon2.Bindings</PackageProjectUrl>
