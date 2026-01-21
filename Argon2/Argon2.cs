@@ -1,3 +1,4 @@
+using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -20,17 +21,32 @@ public static class Argon2
             return IntPtr.Zero;
         }
 
-        // First platform dependent name
-        var platformDependentName = Environment.OSVersion.Platform switch
-        {
-            PlatformID.Win32NT => WindowsAssemblyName,
-            PlatformID.Unix when RuntimeInformation.IsOSPlatform(OSPlatform.OSX) => OSXAssemblyName,
-            PlatformID.Unix => UnixAssemblyName,
-            _ => throw new PlatformNotSupportedException("Unsupported OS platform.")
-        };
+        var libName = GetPlatformLibraryName();
+        var assemblyLocation = assembly.Location;
 
-        // Default resolution first
-        if (NativeLibrary.TryLoad(platformDependentName, assembly, searchPath, out var handle))
+        if (!string.IsNullOrEmpty(assemblyLocation))
+        {
+            var assemblyDir = Path.GetDirectoryName(assemblyLocation);
+            if (assemblyDir != null)
+            {
+                // Try runtimes/{rid}/native/ folder (standard NuGet layout for non-published builds)
+                var runtimesPath = Path.Combine(assemblyDir, "runtimes", GetRuntimeIdentifier(), "native", libName);
+                if (File.Exists(runtimesPath) && NativeLibrary.TryLoad(runtimesPath, out var runtimesHandle))
+                {
+                    return runtimesHandle;
+                }
+
+                // Try directly next to assembly (published apps)
+                var bundledPath = Path.Combine(assemblyDir, libName);
+                if (File.Exists(bundledPath) && NativeLibrary.TryLoad(bundledPath, out var bundledHandle))
+                {
+                    return bundledHandle;
+                }
+            }
+        }
+
+        // Default resolution
+        if (NativeLibrary.TryLoad(libName, assembly, searchPath, out var handle))
         {
             return handle;
         }
@@ -50,7 +66,33 @@ public static class Argon2
             }
         }
 
-        throw new DllNotFoundException($"Could not load {libraryName}. Ensure {libraryName} is installed on your system.");
+        throw new DllNotFoundException(
+            $"Could not load {libraryName}. " +
+            (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+                ? "On macOS, install via: brew install argon2"
+                : "Ensure libargon2 is installed on your system."));
+    }
+
+    private static string GetPlatformLibraryName() =>
+        RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WindowsAssemblyName :
+        RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? OSXAssemblyName :
+        UnixAssemblyName;
+
+    private static string GetRuntimeIdentifier()
+    {
+        var os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win" :
+            RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx" : "linux";
+
+        var arch = RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X64 => "x64",
+            Architecture.Arm64 => "arm64",
+            Architecture.X86 => "x86",
+            Architecture.Arm => "arm",
+            _ => "x64"
+        };
+
+        return $"{os}-{arch}";
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
