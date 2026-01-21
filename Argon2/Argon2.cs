@@ -6,27 +6,51 @@ namespace System.Security.Cryptography;
 
 public static class Argon2
 {
-    public const string WindowsAssemblyName = "libargon2.dll";
-    // Unix adds the word lib in front as one of the resolutions
-    public const string UnixAssemblyName = "libargon2";
+    public const string AssemblyName = "libargon2";
+    public const string WindowsAssemblyName = $"{AssemblyName}.dll";
+    public const string OSXAssemblyName = $"{AssemblyName}.dylib";
+    public const string UnixAssemblyName = $"{AssemblyName}.so";
 
     static Argon2() => NativeLibrary.SetDllImportResolver(Assembly.GetExecutingAssembly(), DllImportResolver);
 
-    public static string GetLibraryName(string libraryName) => Environment.OSVersion.Platform switch
+    private static IntPtr DllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
     {
-        PlatformID.Win32NT => WindowsAssemblyName,
-        _                  => UnixAssemblyName,
-    };
+        if (libraryName != AssemblyName)
+        {
+            return IntPtr.Zero;
+        }
 
-    public static IntPtr DllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
-    {
-        var platformDependentName = GetLibraryName(libraryName);
+        // First platform dependent name
+        var platformDependentName = Environment.OSVersion.Platform switch
+        {
+            PlatformID.Win32NT => WindowsAssemblyName,
+            PlatformID.Unix when RuntimeInformation.IsOSPlatform(OSPlatform.OSX) => OSXAssemblyName,
+            PlatformID.Unix => UnixAssemblyName,
+            _ => throw new PlatformNotSupportedException("Unsupported OS platform.")
+        };
+
+        // Default resolution first
         if (NativeLibrary.TryLoad(platformDependentName, assembly, searchPath, out var handle))
         {
             return handle;
         }
 
-        throw new BadImageFormatException("Could not load the libargon2 native library.");
+        if (NativeLibrary.TryLoad(libraryName, assembly, searchPath, out handle))
+        {
+            return handle;
+        }
+
+        // macOS ARM64: Try Homebrew path
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) &&
+            RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        {
+            if (NativeLibrary.TryLoad($"/opt/homebrew/lib/{AssemblyName}.dylib", out handle))
+            {
+                return handle;
+            }
+        }
+
+        throw new DllNotFoundException($"Could not load {libraryName}. Ensure {libraryName} is installed on your system.");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
