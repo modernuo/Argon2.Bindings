@@ -1,17 +1,11 @@
-using System.Runtime.InteropServices;
+using System.Buffers;
+using System.Buffers.Text;
 using System.Text;
 
 namespace System.Security.Cryptography;
 
 public class Argon2PasswordHasher
 {
-    private static string[] Argon2Types =
-    {
-        "argon2i",
-        "argon2d",
-        "argon2id"
-    };
-
     public uint TimeCost { get; }
 
     public uint MemoryCost { get; }
@@ -92,7 +86,7 @@ public class Argon2PasswordHasher
         var firstNonNull = encoded.LastIndexOfAnyExcept((byte)0);
         if (firstNonNull > -1)
         {
-            encoded = encoded[..(firstNonNull+1)];
+            encoded = encoded[..(firstNonNull + 1)];
         }
 
         return Encoding.ASCII.GetString(encoded);
@@ -123,14 +117,16 @@ public class Argon2PasswordHasher
     {
         var verified = Verify(expectedHash, password);
 
-        if (verified)
+        if (verified && TryExtractMetadataValues(expectedHash, out var values))
         {
-            var hashMetadata = ExtractMetadata(expectedHash);
-
-            if (hashMetadata.MemoryCost != MemoryCost || hashMetadata.TimeCost != TimeCost || hashMetadata.Parallelism != Parallelism)
+            if (values.MemoryCost != MemoryCost || values.TimeCost != TimeCost || values.Parallelism != Parallelism)
             {
+                // Need to rehash - extract salt (TryExtractMetadata will succeed since TryExtractMetadataValues did)
+                Span<byte> salt = stackalloc byte[values.SaltLength];
+                Span<byte> hash = stackalloc byte[values.HashLength];
+                TryExtractMetadata(expectedHash, salt, hash);
+
                 isUpdated = true;
-                var salt = hashMetadata.Salt;
                 newFormattedHash = Hash(password, salt);
                 return true;
             }
@@ -141,85 +137,163 @@ public class Argon2PasswordHasher
         return verified;
     }
 
-    public static HashMetadata ExtractMetadata(ReadOnlySpan<char> formattedHash)
+    /// <summary>
+    /// Extracts only the numeric metadata values from an Argon2 hash string.
+    /// </summary>
+    public static bool TryExtractMetadataValues(ReadOnlySpan<char> formattedHash, out HashMetadataValues values)
     {
-        var context = new Argon2Context
+        values = default;
+
+        // Minimum valid: $argon2i$v=19$m=1,t=1,p=1$AAAA$AAAA
+        if (formattedHash.Length < 30 || formattedHash[0] != '$')
         {
-            Out = Marshal.AllocHGlobal(formattedHash.Length), // ensure the space to hold the hash is long enough
-            OutLen = (uint)formattedHash.Length,
-            Pwd = Marshal.AllocHGlobal(1),
-            PwdLen = 1,
-            Salt = Marshal.AllocHGlobal(formattedHash.Length), // ensure the space to hold the salt is long enough
-            SaltLen = (uint)formattedHash.Length,
-            Secret = Marshal.AllocHGlobal(1),
-            SecretLen = 1,
-            AssocData = Marshal.AllocHGlobal(1),
-            AssocDataLen = 1,
-            TimeCost = 0,
-            MemoryCost = 0,
-            Lanes = 0,
-            Threads = 0
+            return false;
+        }
+
+        // Split by '$' - expecting: "", "argon2{type}", "v={version}", "m=...,t=...,p=...", "{salt}", "{hash}"
+        Span<Range> parts = stackalloc Range[7];
+        var partCount = formattedHash.Split(parts, '$');
+
+        if (partCount < 6)
+        {
+            return false;
+        }
+
+        // Parse type from parts[1] (e.g., "argon2id")
+        Argon2Type type = formattedHash[parts[1]] switch
+        {
+            "argon2i" => Argon2Type.Argon2i,
+            "argon2d" => Argon2Type.Argon2d,
+            "argon2id" => Argon2Type.Argon2id,
+            _ => (Argon2Type)(-1)
         };
 
-        try
+        if ((int)type == -1)
         {
-            Argon2Type type;
-            if (formattedHash.Length >= 8)
-            {
-                // "argon2id", skipping prefixed "$"
-                var typeSlice = formattedHash.Slice(1, Math.Min(8, formattedHash.Length - 2));
-                if (typeSlice.SequenceEqual(Argon2Types[0]))
-                {
-                    type = Argon2Type.Argon2i;
-                }
-                else if (typeSlice.SequenceEqual(Argon2Types[2]))
-                {
-                    type = Argon2Type.Argon2id;
-                }
-                else
-                {
-                    type = Argon2Type.Argon2d;
-                }
-            }
-            else
-            {
-                type = Argon2Type.Argon2d;
-            }
-
-            Span<byte> bytes = stackalloc byte[formattedHash.Length + 1];
-            bytes[^1] = 0; // Terminator
-            Encoding.ASCII.GetBytes(formattedHash, bytes);
-
-            var result = Argon2.Decode(context, bytes, (int)type);
-
-            if (result != Argon2Error.OK)
-            {
-                return null;
-            }
-
-            var salt = new byte[context.SaltLen];
-            var hash = new byte[context.OutLen];
-            Marshal.Copy(context.Salt, salt, 0, salt.Length);
-            Marshal.Copy(context.Out, hash, 0, hash.Length);
-
-            return new HashMetadata
-            (
-                ArgonType: type,
-                MemoryCost: context.MemoryCost,
-                TimeCost: context.TimeCost,
-                Lanes: context.Lanes,
-                Parallelism: context.Threads,
-                Salt: salt,
-                Hash: hash
-            );
+            return false;
         }
-        finally
+
+        // Parse parameters from parts[3] (e.g., "m=65536,t=3,p=4")
+        var paramsStr = formattedHash[parts[3]];
+        uint memoryCost = 0, timeCost = 0, parallelism = 0;
+
+        Span<Range> paramParts = stackalloc Range[4];
+        var paramCount = paramsStr.Split(paramParts, ',');
+
+        for (var i = 0; i < paramCount; i++)
         {
-            Marshal.FreeHGlobal(context.Out);
-            Marshal.FreeHGlobal(context.Pwd);
-            Marshal.FreeHGlobal(context.Salt);
-            Marshal.FreeHGlobal(context.Secret);
-            Marshal.FreeHGlobal(context.AssocData);
+            var param = paramsStr[paramParts[i]];
+            if (param.StartsWith("m=") && uint.TryParse(param[2..], out var m))
+            {
+                memoryCost = m;
+            }
+            else if (param.StartsWith("t=") && uint.TryParse(param[2..], out var t))
+            {
+                timeCost = t;
+            }
+            else if (param.StartsWith("p=") && uint.TryParse(param[2..], out var p))
+            {
+                parallelism = p;
+            }
         }
+
+        if (memoryCost == 0 || timeCost == 0 || parallelism == 0)
+        {
+            return false;
+        }
+
+        // Calculate decoded lengths for salt and hash
+        var saltBase64 = formattedHash[parts[4]];
+        var hashBase64 = formattedHash[parts[5]];
+
+        var saltLength = GetBase64DecodedLength(saltBase64.Length);
+        var hashLength = GetBase64DecodedLength(hashBase64.Length);
+
+        values = new HashMetadataValues(
+            ArgonType: type,
+            MemoryCost: memoryCost,
+            TimeCost: timeCost,
+            Lanes: parallelism,
+            Parallelism: parallelism,
+            SaltLength: saltLength,
+            HashLength: hashLength
+        );
+
+        return true;
+    }
+
+    /// <summary>
+    /// Decodes salt and hash from an Argon2 hash string into caller-provided spans.
+    /// Call TryExtractMetadataValues first to get the required span sizes.
+    /// </summary>
+    public static bool TryExtractMetadata(ReadOnlySpan<char> formattedHash, Span<byte> salt, Span<byte> hash)
+    {
+        // Split to find salt/hash parts (we know format is valid from TryExtractMetadataValues)
+        Span<Range> parts = stackalloc Range[7];
+        formattedHash.Split(parts, '$');
+
+        return TryDecodeBase64NoPadding(formattedHash[parts[4]], salt) &&
+               TryDecodeBase64NoPadding(formattedHash[parts[5]], hash);
+    }
+
+    /// <summary>
+    /// Calculates the decoded byte length for a Base64 string without padding.
+    /// </summary>
+    private static int GetBase64DecodedLength(int base64Length)
+    {
+        // Base64 encodes 3 bytes into 4 chars
+        // Without padding, we need to account for the remainder
+        var fullGroups = base64Length / 4;
+        var remainder = base64Length % 4;
+
+        var length = fullGroups * 3;
+        if (remainder == 2)
+        {
+            return length + 1;
+        }
+
+        if (remainder == 3)
+        {
+            return length + 2;
+        }
+
+        return length;
+    }
+
+    /// <summary>
+    /// Decodes Base64 without padding into a span.
+    /// </summary>
+    private static bool TryDecodeBase64NoPadding(ReadOnlySpan<char> base64, Span<byte> output)
+    {
+        if (base64.IsEmpty)
+        {
+            return true;
+        }
+
+        // Calculate padding needed
+        var paddingNeeded = (4 - base64.Length % 4) % 4;
+
+        if (paddingNeeded == 0)
+        {
+            // No padding needed - decode directly
+            // Convert chars to bytes for Base64.DecodeFromUtf8
+            Span<byte> base64Bytes = stackalloc byte[base64.Length];
+            for (var i = 0; i < base64.Length; i++)
+            {
+                base64Bytes[i] = (byte)base64[i];
+            }
+
+            return Base64.DecodeFromUtf8(base64Bytes, output, out _, out _) == OperationStatus.Done;
+        }
+
+        // Need to add padding
+        Span<byte> paddedBase64 = stackalloc byte[base64.Length + paddingNeeded];
+        for (var i = 0; i < base64.Length; i++)
+        {
+            paddedBase64[i] = (byte)base64[i];
+        }
+        paddedBase64[base64.Length..].Fill((byte)'=');
+
+        return Base64.DecodeFromUtf8(paddedBase64, output, out _, out _) == OperationStatus.Done;
     }
 }

@@ -1,19 +1,14 @@
-﻿namespace System.Security.Cryptography;
+namespace System.Security.Cryptography;
 
-public record HashMetadata(
+/// <summary>
+/// Value type containing the numeric metadata from an Argon2 hash.
+/// </summary>
+public readonly record struct HashMetadataValues(
     Argon2Type ArgonType,
     uint MemoryCost,
     uint TimeCost,
     uint Lanes,
     uint Parallelism,
-    byte[] Salt,
-    byte[] Hash
-)
-{
-    public string GetBase64Salt() => Convert.ToBase64String(Salt).Replace("=", "");
-
-    public string GetBase64Hash() => Convert.ToBase64String(Hash).Replace("=", "");
-
-    public override string ToString() =>
-        $"$argon2{(ArgonType == Argon2Type.Argon2i ? "i" : "d")}$v=19$m={MemoryCost},t={TimeCost},p={Parallelism}${GetBase64Salt()}${GetBase64Hash()}";
-}
+    int SaltLength,
+    int HashLength
+);

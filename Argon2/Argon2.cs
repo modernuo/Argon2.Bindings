@@ -132,15 +132,6 @@ public static class Argon2
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static unsafe Argon2Error Decode(Argon2Context ctx, ReadOnlySpan<byte> str, int type)
-    {
-        fixed (byte* p_str = str)
-        {
-            return decode_string(ctx, p_str, type);
-        }
-    }
-
     [DllImport("libargon2", EntryPoint = "argon2_hash")]
     internal static extern unsafe Argon2Error argon2_hash(uint t_cost, uint m_cost, uint parallelism,
         byte* pwd, long pwdlen,
@@ -152,7 +143,4 @@ public static class Argon2
 
     [DllImport("libargon2", EntryPoint = "argon2_verify")]
     internal static extern unsafe Argon2Error argon2_verify(byte* encoded, byte* pwd, long pwdlen, int type);
-
-    [DllImport("libargon2", EntryPoint = "decode_string")]
-    internal static extern unsafe Argon2Error decode_string(Argon2Context ctx, byte* str, int type);
 }
