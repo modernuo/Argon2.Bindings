@@ -176,15 +176,13 @@ public class Argon2PasswordHasher
 
         if (verified && TryExtractMetadataValues(expectedHash, out var values))
         {
-            if (values.MemoryCost != MemoryCost || values.TimeCost != TimeCost || values.Parallelism != Parallelism)
+            if (values.ArgonType != ArgonType || values.MemoryCost != MemoryCost ||
+                values.TimeCost != TimeCost || values.Parallelism != Parallelism)
             {
-                // Need to rehash - extract salt (TryExtractMetadata will succeed since TryExtractMetadataValues did)
-                Span<byte> salt = stackalloc byte[values.SaltLength];
-                Span<byte> hash = stackalloc byte[values.HashLength];
-                TryExtractMetadata(expectedHash, salt, hash);
-
+                // A rehash is a new credential record, so it gets a new salt. Reusing the stored
+                // salt would needlessly correlate the old and new hashes.
                 isUpdated = true;
-                newFormattedHash = Hash(password, salt);
+                newFormattedHash = Hash(password);
                 return true;
             }
         }

@@ -367,7 +367,27 @@ public class VerifyAndUpdateTests
     }
 
     [Fact]
-    public void VerifyAndUpdate_PreservesSalt_WhenRehashing()
+    public void VerifyAndUpdate_WhenTypeDiffers_Updates()
+    {
+        const string password = "typemigration";
+        var oldHash = new Argon2PasswordHasher(type: Argon2Type.Argon2i, memory: 8192, time: 3).Hash(password);
+        var newHasher = new Argon2PasswordHasher(type: Argon2Type.Argon2id, memory: 16384, time: 1);
+
+        var verified = newHasher.VerifyAndUpdate(oldHash, password, out var isUpdated, out var newHash);
+
+        Assert.True(verified);
+        Assert.True(isUpdated);
+        Assert.StartsWith("$argon2id$", newHash);
+        Assert.True(newHasher.Verify(newHash, password));
+
+        Assert.True(Argon2PasswordHasher.TryExtractMetadataValues(newHash, out var values));
+        Assert.Equal(Argon2Type.Argon2id, values.ArgonType);
+        Assert.Equal(16384u, values.MemoryCost);
+        Assert.Equal(1u, values.TimeCost);
+    }
+
+    [Fact]
+    public void VerifyAndUpdate_RegeneratesSalt_WhenRehashing()
     {
         var oldHasher = new Argon2PasswordHasher(time: 2, memory: 4096, parallel: 1);
         var newHasher = new Argon2PasswordHasher(time: 3, memory: 8192, parallel: 2);
@@ -387,8 +407,9 @@ public class VerifyAndUpdateTests
         Span<byte> newHashBytes = stackalloc byte[newValues.HashLength];
         Argon2PasswordHasher.TryExtractMetadata(newHash, newSalt, newHashBytes);
 
-        // Salt should be preserved
-        Assert.True(oldSalt.SequenceEqual(newSalt));
+        // A rehash is a new credential record, so it gets a new salt.
+        Assert.False(oldSalt.SequenceEqual(newSalt));
+        Assert.True(newHasher.Verify(newHash, password));
     }
 }
 
