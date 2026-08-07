@@ -83,10 +83,14 @@ public class Argon2PasswordHasher
             throw new Argon2Exception("hashing", result);
         }
 
-        var firstNonNull = encoded.LastIndexOfAnyExcept((byte)0);
-        if (firstNonNull > -1)
+        // argon2 writes a null-terminated C string into the buffer. Trim at the
+        // first NUL rather than scanning for the last non-zero byte, so we never
+        // depend on the buffer past the terminator being zero (which is not
+        // guaranteed under [module: SkipLocalsInit]).
+        var nullIndex = encoded.IndexOf((byte)0);
+        if (nullIndex >= 0)
         {
-            encoded = encoded[..(firstNonNull + 1)];
+            encoded = encoded[..nullIndex];
         }
 
         return Encoding.ASCII.GetString(encoded);
@@ -94,8 +98,13 @@ public class Argon2PasswordHasher
 
     public bool Verify(ReadOnlySpan<char> expectedHash, ReadOnlySpan<char> password)
     {
-        Span<byte> expectedHashBytes = stackalloc byte[StringEncoding.GetByteCount(expectedHash) + 1];
+        var expectedHashByteCount = StringEncoding.GetByteCount(expectedHash);
+        Span<byte> expectedHashBytes = stackalloc byte[expectedHashByteCount + 1];
         StringEncoding.GetBytes(expectedHash, expectedHashBytes);
+        // Native argon2_verify expects a null-terminated C string. Set the
+        // terminator explicitly; do not rely on stackalloc zeroing, which is
+        // absent under [module: SkipLocalsInit].
+        expectedHashBytes[expectedHashByteCount] = 0;
         Span<byte> passwordBytes = stackalloc byte[StringEncoding.GetByteCount(password)];
         StringEncoding.GetBytes(password, passwordBytes);
         return Verify(expectedHashBytes, passwordBytes);
@@ -228,9 +237,17 @@ public class Argon2PasswordHasher
     /// </summary>
     public static bool TryExtractMetadata(ReadOnlySpan<char> formattedHash, Span<byte> salt, Span<byte> hash)
     {
-        // Split to find salt/hash parts (we know format is valid from TryExtractMetadataValues)
+        // Split to find salt/hash parts. Guard on the count rather than assuming
+        // a valid format: under [module: SkipLocalsInit] the unwritten Range
+        // entries are garbage, so reading parts[4]/parts[5] without checking
+        // would index with uninitialized ranges.
         Span<Range> parts = stackalloc Range[7];
-        formattedHash.Split(parts, '$');
+        var partCount = formattedHash.Split(parts, '$');
+
+        if (partCount < 6)
+        {
+            return false;
+        }
 
         return TryDecodeBase64NoPadding(formattedHash[parts[4]], salt) &&
                TryDecodeBase64NoPadding(formattedHash[parts[5]], hash);
