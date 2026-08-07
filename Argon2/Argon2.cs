@@ -12,6 +12,13 @@ public static class Argon2
     public const string OSXAssemblyName = $"{AssemblyName}.dylib";
     public const string UnixAssemblyName = $"{AssemblyName}.so";
 
+    /// <summary>
+    /// Highest libargon2.so.N suffix probed on Linux. argon2 has been .so.1 everywhere we checked
+    /// (Debian, Ubuntu, Fedora, Alpine) while libdeflate is .so.0 on the same machines -- the digit
+    /// is per library and per distro, not a convention, which is why a range is probed.
+    /// </summary>
+    private const int MaxSoVersion = 9;
+
     static Argon2() => NativeLibrary.SetDllImportResolver(Assembly.GetExecutingAssembly(), DllImportResolver);
 
     private static IntPtr DllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
@@ -45,32 +52,58 @@ public static class Argon2
             }
         }
 
-        // Default resolution
+        // The loader's own search path, unversioned. This is what an install with the -dev package
+        // resolves on, so it stays ahead of the versioned probe below.
         if (NativeLibrary.TryLoad(libName, assembly, searchPath, out var handle))
         {
             return handle;
         }
 
-        if (NativeLibrary.TryLoad(libraryName, assembly, searchPath, out handle))
+        // Linux ships libargon2.so.N and only the -dev package adds the unversioned symlink the
+        // step above needs. Probe versions by bare name so this still goes through the full loader
+        // search path (LD_LIBRARY_PATH, /etc/ld.so.conf.d). Descending prefers the newest ABI.
+        if (OperatingSystem.IsLinux())
+        {
+            for (var soVersion = MaxSoVersion; soVersion >= 0; soVersion--)
+            {
+                if (NativeLibrary.TryLoad($"{AssemblyName}.so.{soVersion}", assembly, searchPath, out handle))
+                {
+                    return handle;
+                }
+            }
+        }
+
+        // Homebrew on Apple Silicon is off the default dyld search path.
+        if (OperatingSystem.IsMacOS() &&
+            RuntimeInformation.ProcessArchitecture == Architecture.Arm64 &&
+            NativeLibrary.TryLoad($"/opt/homebrew/lib/{OSXAssemblyName}", out handle))
         {
             return handle;
         }
 
-        // macOS ARM64: Try Homebrew path
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) &&
-            RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        throw new DllNotFoundException(BuildNotFoundMessage());
+    }
+
+    private static string BuildNotFoundMessage()
+    {
+        if (OperatingSystem.IsLinux())
         {
-            if (NativeLibrary.TryLoad($"/opt/homebrew/lib/{AssemblyName}.dylib", out handle))
-            {
-                return handle;
-            }
+            return $"""
+                   Could not load {AssemblyName}. Tried {UnixAssemblyName} and {AssemblyName}.so.0 through {AssemblyName}.so.{MaxSoVersion} on the loader path, and runtimes/{GetRuntimeIdentifier()}/native/ next to the assembly.
+
+                   Install the runtime library. The -dev package is NOT required:
+                     Debian/Ubuntu   sudo apt-get install -y libargon2-1
+                     Fedora/RHEL     sudo dnf install -y libargon2
+                     Alpine          apk add argon2-libs
+                   """;
         }
 
-        throw new DllNotFoundException(
-            $"Could not load {libraryName}. " +
-            (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
-                ? "On macOS, install via: brew install argon2"
-                : "Ensure libargon2 is installed on your system."));
+        if (OperatingSystem.IsMacOS())
+        {
+            return $"Could not load {AssemblyName}. Install it with: brew install argon2";
+        }
+
+        return $"Could not load {AssemblyName}. The bundled runtimes/{GetRuntimeIdentifier()}/native/{GetPlatformLibraryName()} is missing from the package.";
     }
 
     private static string GetPlatformLibraryName() =>
