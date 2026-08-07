@@ -513,4 +513,58 @@ public class CrossTypeVerifyTests
         Assert.False(new Argon2PasswordHasher().Verify(malformed, Password));
         Assert.False(Argon2PasswordHasher.Verify(malformed, Password));
     }
+
+    // Native argon2_verify expects a NUL-terminated C string. Mirrors the char-path Verify's
+    // termination discipline (Argon2PasswordHasher.cs:118-122): set the terminator explicitly
+    // rather than assume a zeroed buffer.
+    private static byte[] ToNulTerminatedUtf8(string value)
+    {
+        var byteCount = Encoding.UTF8.GetByteCount(value);
+        var bytes = new byte[byteCount + 1];
+        Encoding.UTF8.GetBytes(value, bytes);
+        bytes[byteCount] = 0;
+        return bytes;
+    }
+
+    [Theory]
+    [InlineData(Argon2Type.Argon2d)]
+    [InlineData(Argon2Type.Argon2i)]
+    [InlineData(Argon2Type.Argon2id)]
+    public void Verify_ByteOverload_UsesTypeFromEncodedHash(Argon2Type stored)
+    {
+        var hash = new Argon2PasswordHasher(type: stored).Hash(Password);
+        var hashBytes = ToNulTerminatedUtf8(hash);
+        var passwordBytes = Encoding.UTF8.GetBytes(Password);
+
+        // Verified through an instance whose own ArgonType is neither Argon2d, Argon2i nor
+        // Argon2id explicitly chosen to match `stored` -- the byte overload must derive the
+        // type from the "$argon2id$"/"$argon2i$"/"$argon2d$" prefix, not from this instance.
+        var result = new Argon2PasswordHasher(type: Argon2Type.Argon2d).Verify(hashBytes, passwordBytes);
+
+        Assert.True(result, $"stored={stored}");
+    }
+
+    [Fact]
+    public void Verify_ByteOverload_WithWrongPassword_IsFalse()
+    {
+        var hash = new Argon2PasswordHasher(type: Argon2Type.Argon2id).Hash(Password);
+        var hashBytes = ToNulTerminatedUtf8(hash);
+        var passwordBytes = Encoding.UTF8.GetBytes("not-the-password");
+
+        var result = new Argon2PasswordHasher().Verify(hashBytes, passwordBytes);
+
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-a-hash")]
+    [InlineData("$scrypt$v=19$m=8192,t=3,p=1$AAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAA")]
+    public void Verify_ByteOverload_WithMalformedPrefix_ReturnsFalseAndDoesNotThrow(string malformed)
+    {
+        var hashBytes = ToNulTerminatedUtf8(malformed);
+        var passwordBytes = Encoding.UTF8.GetBytes(Password);
+
+        Assert.False(new Argon2PasswordHasher().Verify(hashBytes, passwordBytes));
+    }
 }
