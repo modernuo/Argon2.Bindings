@@ -14,7 +14,7 @@ var hasher = new Argon2PasswordHasher();
 string myhash = hasher.Hash("mypassword");
 ```
 
-## Verification reads the hash, not your configuration (1.20.0)
+### Verification reads the hash, not your configuration (1.20.0)
 
 `Argon2PasswordHasher.Verify` resolves the Argon2 type from the PHC string it is given. An
 instance's `ArgonType` configures **hashing** only.
