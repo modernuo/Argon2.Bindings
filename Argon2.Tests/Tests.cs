@@ -386,6 +386,31 @@ public class VerifyAndUpdateTests
         Assert.Equal(1u, values.TimeCost);
     }
 
+    [Theory]
+    [InlineData(Argon2Type.Argon2i, Argon2Type.Argon2id)]
+    [InlineData(Argon2Type.Argon2id, Argon2Type.Argon2i)]
+    [InlineData(Argon2Type.Argon2d, Argon2Type.Argon2id)]
+    public void VerifyAndUpdate_WhenOnlyTheTypeDiffers_Updates(Argon2Type stored, Argon2Type configured)
+    {
+        const string password = "typeonly";
+
+        // Identical cost parameters on both sides, so ONLY the type can trigger the update.
+        var oldHash = new Argon2PasswordHasher(type: stored, memory: 8192, time: 2, parallel: 1).Hash(password);
+        var newHasher = new Argon2PasswordHasher(type: configured, memory: 8192, time: 2, parallel: 1);
+
+        var verified = newHasher.VerifyAndUpdate(oldHash, password, out var isUpdated, out var newHash);
+
+        Assert.True(verified);
+        Assert.True(isUpdated);
+        Assert.NotEqual(oldHash, newHash);
+        Assert.True(Argon2PasswordHasher.TryExtractMetadataValues(newHash, out var values));
+        Assert.Equal(configured, values.ArgonType);
+        Assert.Equal(8192u, values.MemoryCost);
+        Assert.Equal(2u, values.TimeCost);
+        Assert.Equal(1u, values.Parallelism);
+        Assert.True(newHasher.Verify(newHash, password));
+    }
+
     [Fact]
     public void VerifyAndUpdate_RegeneratesSalt_WhenRehashing()
     {
