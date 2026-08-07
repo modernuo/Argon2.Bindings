@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  windows:
+    name: Windows (bundled DLL)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet test Argon2.sln --configuration Release
+
+  linux-runtime-only:
+    name: Linux (runtime package only, no -dev)
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:10.0
+    env:
+      ARGON2_TEST_MODE: runtime-only
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install the runtime library only
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq libargon2-1
+      # Load-bearing. If a future base image starts shipping the unversioned symlink, resolution
+      # would succeed on the plain-name step and this job would silently stop exercising the
+      # versioned probe it exists to test.
+      - name: Assert the unversioned symlink is absent
+        run: |
+          if ls /usr/lib/*/libargon2.so 2>/dev/null; then
+            echo "libargon2.so symlink present - this job is not testing what it claims" >&2
+            exit 1
+          fi
+      - run: dotnet test Argon2.sln --configuration Release
+
+  linux-dev-package:
+    name: Linux (-dev installed, regression guard)
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:10.0
+    env:
+      ARGON2_TEST_MODE: dev
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install the -dev package, as existing servers have
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq libargon2-dev
+      - run: dotnet test Argon2.sln --configuration Release
+
+  linux-musl:
+    name: Alpine (musl, runtime package only)
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:10.0-alpine
+    env:
+      ARGON2_TEST_MODE: runtime-only
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - run: apk add --no-cache argon2-libs
+      - run: dotnet test Argon2.sln --configuration Release
+
+  linux-missing:
+    name: Linux (no native library)
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:10.0
+    env:
+      ARGON2_TEST_MODE: missing
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      # Filtered: the hashing tests all call into the native library, so they fail by design when
+      # it is absent. Only the resolution tests are meaningful in this job.
+      - run: >
+          dotnet test Argon2.sln --configuration Release
+          --filter FullyQualifiedName~NativeResolutionTests
