@@ -582,10 +582,12 @@ public class CrossTypeVerifyTests
         var hashBytes = ToNulTerminatedUtf8(hash);
         var passwordBytes = Encoding.UTF8.GetBytes(Password);
 
-        // Verified through an instance whose own ArgonType is neither Argon2d, Argon2i nor
-        // Argon2id explicitly chosen to match `stored` -- the byte overload must derive the
-        // type from the "$argon2id$"/"$argon2i$"/"$argon2d$" prefix, not from this instance.
-        var result = new Argon2PasswordHasher(type: Argon2Type.Argon2d).Verify(hashBytes, passwordBytes);
+        // The verifying instance is deliberately given a type that never equals the one the hash was
+        // produced under, so every row is a real disagreement rather than an accidental match: the
+        // byte overload must derive the type from the "$argon2id$"/"$argon2i$"/"$argon2d$" prefix.
+        // Resolving it from the instance instead fails decode_string and returns false on every row.
+        var verifier = stored == Argon2Type.Argon2d ? Argon2Type.Argon2i : Argon2Type.Argon2d;
+        var result = new Argon2PasswordHasher(type: verifier).Verify(hashBytes, passwordBytes);
 
         Assert.True(result, $"stored={stored}");
     }
