@@ -367,7 +367,52 @@ public class VerifyAndUpdateTests
     }
 
     [Fact]
-    public void VerifyAndUpdate_PreservesSalt_WhenRehashing()
+    public void VerifyAndUpdate_WhenTypeDiffers_Updates()
+    {
+        const string password = "typemigration";
+        var oldHash = new Argon2PasswordHasher(type: Argon2Type.Argon2i, memory: 8192, time: 3).Hash(password);
+        var newHasher = new Argon2PasswordHasher(type: Argon2Type.Argon2id, memory: 16384, time: 1);
+
+        var verified = newHasher.VerifyAndUpdate(oldHash, password, out var isUpdated, out var newHash);
+
+        Assert.True(verified);
+        Assert.True(isUpdated);
+        Assert.StartsWith("$argon2id$", newHash);
+        Assert.True(newHasher.Verify(newHash, password));
+
+        Assert.True(Argon2PasswordHasher.TryExtractMetadataValues(newHash, out var values));
+        Assert.Equal(Argon2Type.Argon2id, values.ArgonType);
+        Assert.Equal(16384u, values.MemoryCost);
+        Assert.Equal(1u, values.TimeCost);
+    }
+
+    [Theory]
+    [InlineData(Argon2Type.Argon2i, Argon2Type.Argon2id)]
+    [InlineData(Argon2Type.Argon2id, Argon2Type.Argon2i)]
+    [InlineData(Argon2Type.Argon2d, Argon2Type.Argon2id)]
+    public void VerifyAndUpdate_WhenOnlyTheTypeDiffers_Updates(Argon2Type stored, Argon2Type configured)
+    {
+        const string password = "typeonly";
+
+        // Identical cost parameters on both sides, so ONLY the type can trigger the update.
+        var oldHash = new Argon2PasswordHasher(type: stored, memory: 8192, time: 2, parallel: 1).Hash(password);
+        var newHasher = new Argon2PasswordHasher(type: configured, memory: 8192, time: 2, parallel: 1);
+
+        var verified = newHasher.VerifyAndUpdate(oldHash, password, out var isUpdated, out var newHash);
+
+        Assert.True(verified);
+        Assert.True(isUpdated);
+        Assert.NotEqual(oldHash, newHash);
+        Assert.True(Argon2PasswordHasher.TryExtractMetadataValues(newHash, out var values));
+        Assert.Equal(configured, values.ArgonType);
+        Assert.Equal(8192u, values.MemoryCost);
+        Assert.Equal(2u, values.TimeCost);
+        Assert.Equal(1u, values.Parallelism);
+        Assert.True(newHasher.Verify(newHash, password));
+    }
+
+    [Fact]
+    public void VerifyAndUpdate_RegeneratesSalt_WhenRehashing()
     {
         var oldHasher = new Argon2PasswordHasher(time: 2, memory: 4096, parallel: 1);
         var newHasher = new Argon2PasswordHasher(time: 3, memory: 8192, parallel: 2);
@@ -387,8 +432,9 @@ public class VerifyAndUpdateTests
         Span<byte> newHashBytes = stackalloc byte[newValues.HashLength];
         Argon2PasswordHasher.TryExtractMetadata(newHash, newSalt, newHashBytes);
 
-        // Salt should be preserved
-        Assert.True(oldSalt.SequenceEqual(newSalt));
+        // A rehash is a new credential record, so it gets a new salt.
+        Assert.False(oldSalt.SequenceEqual(newSalt));
+        Assert.True(newHasher.Verify(newHash, password));
     }
 }
 
@@ -442,5 +488,131 @@ public class Argon2ExceptionTests
         );
 
         Assert.Throws<Argon2Exception>(() => hasher.Hash("test"));
+    }
+}
+
+public class CrossTypeVerifyTests
+{
+    private const string Password = "hunter2";
+
+    public static TheoryData<Argon2Type, Argon2Type> TypePairs()
+    {
+        var data = new TheoryData<Argon2Type, Argon2Type>();
+        foreach (var stored in new[] { Argon2Type.Argon2d, Argon2Type.Argon2i, Argon2Type.Argon2id })
+        {
+            foreach (var verifier in new[] { Argon2Type.Argon2d, Argon2Type.Argon2i, Argon2Type.Argon2id })
+            {
+                data.Add(stored, verifier);
+            }
+        }
+
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(TypePairs))]
+    public void Verify_UsesTypeFromEncodedHash_NotTheInstance(Argon2Type stored, Argon2Type verifier)
+    {
+        var hash = new Argon2PasswordHasher(type: stored).Hash(Password);
+        var result = new Argon2PasswordHasher(type: verifier).Verify(hash, Password);
+
+        Assert.True(result, $"stored={stored} verifier={verifier}");
+    }
+
+    [Theory]
+    [MemberData(nameof(TypePairs))]
+    public void Verify_WithWrongPassword_IsFalseForEveryTypePair(Argon2Type stored, Argon2Type verifier)
+    {
+        var hash = new Argon2PasswordHasher(type: stored).Hash(Password);
+        var result = new Argon2PasswordHasher(type: verifier).Verify(hash, "not-the-password");
+
+        Assert.False(result, $"stored={stored} verifier={verifier}");
+    }
+
+    [Fact]
+    public void Verify_StaticOverload_NeedsNoInstance()
+    {
+        var hash = new Argon2PasswordHasher(type: Argon2Type.Argon2i, memory: 8192, time: 3).Hash(Password);
+
+        Assert.True(Argon2PasswordHasher.Verify(hash, Password));
+        Assert.False(Argon2PasswordHasher.Verify(hash, "wrong"));
+    }
+
+    [Fact]
+    public void Verify_IgnoresInstanceCostParameters()
+    {
+        // Cost is embedded in the hash; a verifier configured differently must still succeed.
+        var hash = new Argon2PasswordHasher(type: Argon2Type.Argon2i, memory: 8192, time: 3).Hash(Password);
+        var verifier = new Argon2PasswordHasher(type: Argon2Type.Argon2id, memory: 16384, time: 1);
+
+        Assert.True(verifier.Verify(hash, Password));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-a-hash")]
+    [InlineData("$argon2i$v=19$m=8192,t=3,p=1$AAAA")]
+    [InlineData("$scrypt$v=19$m=8192,t=3,p=1$AAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAA")]
+    [InlineData("$argon2x$v=19$m=8192,t=3,p=1$AAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAA")]
+    public void Verify_WithMalformedHash_ReturnsFalseAndDoesNotThrow(string malformed)
+    {
+        Assert.False(new Argon2PasswordHasher().Verify(malformed, Password));
+        Assert.False(Argon2PasswordHasher.Verify(malformed, Password));
+    }
+
+    // Native argon2_verify expects a NUL-terminated C string. Mirrors the char-path Verify's
+    // termination discipline (Argon2PasswordHasher.cs:118-122): set the terminator explicitly
+    // rather than assume a zeroed buffer.
+    private static byte[] ToNulTerminatedUtf8(string value)
+    {
+        var byteCount = Encoding.UTF8.GetByteCount(value);
+        var bytes = new byte[byteCount + 1];
+        Encoding.UTF8.GetBytes(value, bytes);
+        bytes[byteCount] = 0;
+        return bytes;
+    }
+
+    [Theory]
+    [InlineData(Argon2Type.Argon2d)]
+    [InlineData(Argon2Type.Argon2i)]
+    [InlineData(Argon2Type.Argon2id)]
+    public void Verify_ByteOverload_UsesTypeFromEncodedHash(Argon2Type stored)
+    {
+        var hash = new Argon2PasswordHasher(type: stored).Hash(Password);
+        var hashBytes = ToNulTerminatedUtf8(hash);
+        var passwordBytes = Encoding.UTF8.GetBytes(Password);
+
+        // The verifying instance is deliberately given a type that never equals the one the hash was
+        // produced under, so every row is a real disagreement rather than an accidental match: the
+        // byte overload must derive the type from the "$argon2id$"/"$argon2i$"/"$argon2d$" prefix.
+        // Resolving it from the instance instead fails decode_string and returns false on every row.
+        var verifier = stored == Argon2Type.Argon2d ? Argon2Type.Argon2i : Argon2Type.Argon2d;
+        var result = new Argon2PasswordHasher(type: verifier).Verify(hashBytes, passwordBytes);
+
+        Assert.True(result, $"stored={stored}");
+    }
+
+    [Fact]
+    public void Verify_ByteOverload_WithWrongPassword_IsFalse()
+    {
+        var hash = new Argon2PasswordHasher(type: Argon2Type.Argon2id).Hash(Password);
+        var hashBytes = ToNulTerminatedUtf8(hash);
+        var passwordBytes = Encoding.UTF8.GetBytes("not-the-password");
+
+        var result = new Argon2PasswordHasher().Verify(hashBytes, passwordBytes);
+
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-a-hash")]
+    [InlineData("$scrypt$v=19$m=8192,t=3,p=1$AAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAA")]
+    public void Verify_ByteOverload_WithMalformedPrefix_ReturnsFalseAndDoesNotThrow(string malformed)
+    {
+        var hashBytes = ToNulTerminatedUtf8(malformed);
+        var passwordBytes = Encoding.UTF8.GetBytes(Password);
+
+        Assert.False(new Argon2PasswordHasher().Verify(hashBytes, passwordBytes));
     }
 }

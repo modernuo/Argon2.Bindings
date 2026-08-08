@@ -96,23 +96,43 @@ public class Argon2PasswordHasher
         return Encoding.ASCII.GetString(encoded);
     }
 
-    public bool Verify(ReadOnlySpan<char> expectedHash, ReadOnlySpan<char> password)
+    public bool Verify(ReadOnlySpan<char> expectedHash, ReadOnlySpan<char> password) =>
+        Verify(expectedHash, password, StringEncoding);
+
+    /// <summary>
+    /// Verifies a PHC-encoded Argon2 hash. The Argon2 type is read from the encoded string rather
+    /// than taken from a hasher instance: the string is self-describing, and native argon2_verify
+    /// rejects a prefix that disagrees with the type it is handed — a failure indistinguishable
+    /// from a wrong password. An instance's <see cref="ArgonType"/> configures hashing only.
+    /// </summary>
+    public static bool Verify(ReadOnlySpan<char> expectedHash, ReadOnlySpan<char> password, Encoding encoding = null)
     {
-        var expectedHashByteCount = StringEncoding.GetByteCount(expectedHash);
+        if (!TryExtractMetadataValues(expectedHash, out var values))
+        {
+            return false;
+        }
+
+        encoding ??= Encoding.UTF8;
+
+        var expectedHashByteCount = encoding.GetByteCount(expectedHash);
+        // Native argon2_verify expects a null-terminated C string. Set the terminator explicitly;
+        // do not rely on stackalloc zeroing, which is absent under [module: SkipLocalsInit].
         Span<byte> expectedHashBytes = stackalloc byte[expectedHashByteCount + 1];
-        StringEncoding.GetBytes(expectedHash, expectedHashBytes);
-        // Native argon2_verify expects a null-terminated C string. Set the
-        // terminator explicitly; do not rely on stackalloc zeroing, which is
-        // absent under [module: SkipLocalsInit].
+        encoding.GetBytes(expectedHash, expectedHashBytes);
         expectedHashBytes[expectedHashByteCount] = 0;
-        Span<byte> passwordBytes = stackalloc byte[StringEncoding.GetByteCount(password)];
-        StringEncoding.GetBytes(password, passwordBytes);
-        return Verify(expectedHashBytes, passwordBytes);
+
+        Span<byte> passwordBytes = stackalloc byte[encoding.GetByteCount(password)];
+        encoding.GetBytes(password, passwordBytes);
+
+        return VerifyCore(expectedHashBytes, passwordBytes, values.ArgonType);
     }
 
-    public bool Verify(ReadOnlySpan<byte> expectedHash, ReadOnlySpan<byte> password)
+    public bool Verify(ReadOnlySpan<byte> expectedHash, ReadOnlySpan<byte> password) =>
+        TryGetEncodedType(expectedHash, out var type) && VerifyCore(expectedHash, password, type);
+
+    private static bool VerifyCore(ReadOnlySpan<byte> expectedHash, ReadOnlySpan<byte> password, Argon2Type type)
     {
-        var result = Argon2.Verify(expectedHash, password, password.Length, (int)ArgonType);
+        var result = Argon2.Verify(expectedHash, password, password.Length, (int)type);
 
         if (result is Argon2Error.OK or Argon2Error.VERIFY_MISMATCH or Argon2Error.DECODING_FAIL)
         {
@@ -122,21 +142,47 @@ public class Argon2PasswordHasher
         throw new Argon2Exception("verifying", result);
     }
 
+    /// <summary>
+    /// Reads the Argon2 type from a PHC-encoded hash's ASCII prefix. The trailing '$' keeps
+    /// "argon2i" and "argon2id" unambiguous.
+    /// </summary>
+    private static bool TryGetEncodedType(ReadOnlySpan<byte> encoded, out Argon2Type type)
+    {
+        if (encoded.StartsWith("$argon2id$"u8))
+        {
+            type = Argon2Type.Argon2id;
+            return true;
+        }
+
+        if (encoded.StartsWith("$argon2i$"u8))
+        {
+            type = Argon2Type.Argon2i;
+            return true;
+        }
+
+        if (encoded.StartsWith("$argon2d$"u8))
+        {
+            type = Argon2Type.Argon2d;
+            return true;
+        }
+
+        type = default;
+        return false;
+    }
+
     public bool VerifyAndUpdate(ReadOnlySpan<char> expectedHash, ReadOnlySpan<char> password, out bool isUpdated, out string newFormattedHash)
     {
         var verified = Verify(expectedHash, password);
 
         if (verified && TryExtractMetadataValues(expectedHash, out var values))
         {
-            if (values.MemoryCost != MemoryCost || values.TimeCost != TimeCost || values.Parallelism != Parallelism)
+            if (values.ArgonType != ArgonType || values.MemoryCost != MemoryCost ||
+                values.TimeCost != TimeCost || values.Parallelism != Parallelism)
             {
-                // Need to rehash - extract salt (TryExtractMetadata will succeed since TryExtractMetadataValues did)
-                Span<byte> salt = stackalloc byte[values.SaltLength];
-                Span<byte> hash = stackalloc byte[values.HashLength];
-                TryExtractMetadata(expectedHash, salt, hash);
-
+                // A rehash is a new credential record, so it gets a new salt. Reusing the stored
+                // salt would needlessly correlate the old and new hashes.
                 isUpdated = true;
-                newFormattedHash = Hash(password, salt);
+                newFormattedHash = Hash(password);
                 return true;
             }
         }
