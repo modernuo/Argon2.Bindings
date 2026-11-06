@@ -29,10 +29,11 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # GeneratePackageOnBuild=true makes pack skip its build, packing an empty bin/ on a clean runner.
       # Pack before logging in: the temporary key expires after an hour.
       - name: Pack
         run: |
-          dotnet pack Argon2/Argon2.csproj -c Release -o "$PACKAGE_DIR"
+          dotnet pack Argon2/Argon2.csproj -c Release -p:GeneratePackageOnBuild=false -o "$PACKAGE_DIR"
 
       - name: NuGet login (OIDC)
         id: login
