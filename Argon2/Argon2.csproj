@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <Authors>Kamron Batman</Authors>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
         <LangVersion>preview</LangVersion>
-        <AssemblyVersion>1.20.0</AssemblyVersion>
-        <PackageVersion>1.20.0</PackageVersion>
+        <AssemblyVersion>1.21.0</AssemblyVersion>
+        <PackageVersion>1.21.0</PackageVersion>
         <RootNamespace>System.Security.Cryptography</RootNamespace>
         <AssemblyName>Argon2.Bindings</AssemblyName>
         <IsPackable>true</IsPackable>

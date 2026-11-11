@@ -15,13 +15,15 @@ jobs:
           submodules: recursive
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: |
+            10.0.x
+            11.0.x
       - run: dotnet test Argon2.sln --configuration Release
 
   linux-runtime-only:
     name: Linux (runtime package only, no -dev)
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/dotnet/sdk:10.0
+    container: mcr.microsoft.com/dotnet/sdk:11.0
     env:
       ARGON2_TEST_MODE: runtime-only
     steps:
@@ -41,12 +43,12 @@ jobs:
             echo "libargon2.so symlink present - this job is not testing what it claims" >&2
             exit 1
           fi
-      - run: dotnet test Argon2.sln --configuration Release
+      - run: dotnet test Argon2.sln --configuration Release -f net11.0
 
   linux-dev-package:
     name: Linux (-dev installed, regression guard)
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/dotnet/sdk:10.0
+    container: mcr.microsoft.com/dotnet/sdk:11.0
     env:
       ARGON2_TEST_MODE: dev
     steps:
@@ -57,12 +59,12 @@ jobs:
         run: |
           apt-get update -qq
           apt-get install -y -qq libargon2-dev
-      - run: dotnet test Argon2.sln --configuration Release
+      - run: dotnet test Argon2.sln --configuration Release -f net11.0
 
   linux-musl:
     name: Alpine (musl, runtime package only)
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/dotnet/sdk:10.0-alpine
+    container: mcr.microsoft.com/dotnet/sdk:11.0-alpine
     env:
       ARGON2_TEST_MODE: runtime-only
     steps:
@@ -70,12 +72,12 @@ jobs:
         with:
           submodules: recursive
       - run: apk add --no-cache argon2-libs
-      - run: dotnet test Argon2.sln --configuration Release
+      - run: dotnet test Argon2.sln --configuration Release -f net11.0
 
   linux-missing:
     name: Linux (no native library)
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/dotnet/sdk:10.0
+    container: mcr.microsoft.com/dotnet/sdk:11.0
     env:
       ARGON2_TEST_MODE: missing
     steps:
@@ -85,5 +87,5 @@ jobs:
       # Filtered: the hashing tests all call into the native library, so they fail by design when
       # it is absent. Only the resolution tests are meaningful in this job.
       - run: >
-          dotnet test Argon2.sln --configuration Release
+          dotnet test Argon2.sln --configuration Release -f net11.0
           --filter FullyQualifiedName~NativeResolutionTests
